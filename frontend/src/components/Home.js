@@ -7,7 +7,7 @@ function Home() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:3001/")
+      .get("/api/hello/")
       .then((response) => {
         setMessage(response.data.msg);
       })
@@ -16,7 +16,7 @@ function Home() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:3002/fetchUser")
+      .get("/api/profile/fetchUser")
       .then((response) => {
         setProfile(response.data);
         
@@ -35,7 +35,7 @@ function Home() {
         profile.map((user) => {
             console.log('user', user)
           return (
-            <div>
+            <div key={user._id}>
               <h3>Name: {user.name}</h3>
               <h3>Age: {user.age}</h3>
             </div>
