@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: profile-service
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.replicaCount.profileService }}
+  selector:
+    matchLabels:
+      app: profile-service
+  template:
+    metadata:
+      labels:
+        app: profile-service
+    spec:
+      containers:
+        - name: profile-service
+          image: "{{ .Values.images.profileService.repository }}:{{ .Values.images.profileService.tag }}"
+          ports:
+            - containerPort: 3002
+          env:
+            - name: PORT
+              value: "3002"
+            - name: MONGO_URL
+              value: "mongodb://mongodb:27017/streamingapp"
+          resources:
+{{ toYaml .Values.resources.profileService | indent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: profile-service
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: profile-service
+  ports:
+    - port: {{ .Values.services.profileService.port }}
+      targetPort: 3002
+  type: ClusterIP

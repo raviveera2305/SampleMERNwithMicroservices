@@ -1,0 +1,71 @@
+namespace: mern-app
+
+images:
+  helloService:
+    repository: 526362561261.dkr.ecr.ap-south-1.amazonaws.com/hello-service
+    tag: latest
+
+  profileService:
+    repository: 526362561261.dkr.ecr.ap-south-1.amazonaws.com/profile-service
+    tag: latest
+
+  frontend:
+    repository: 526362561261.dkr.ecr.ap-south-1.amazonaws.com/frontend
+    tag: latest
+
+  mongodb:
+    repository: mongo
+    tag: "7"
+
+replicaCount:
+  helloService: 2
+  profileService: 2
+  frontend: 2
+  mongodb: 1
+
+services:
+  helloService:
+    port: 3001
+
+  profileService:
+    port: 3002
+
+  mongodb:
+    port: 27017
+
+  frontend:
+    port: 80
+    type: LoadBalancer
+
+resources:
+  helloService:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+  profileService:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+  frontend:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+  mongodb:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
