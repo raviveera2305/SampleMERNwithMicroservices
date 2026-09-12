@@ -4,6 +4,8 @@ pipeline {
     environment {
         AWS_REGION = 'ap-south-1'
         ECR_REGISTRY = '526362561261.dkr.ecr.ap-south-1.amazonaws.com'
+        EKS_CLUSTER = 'mern-eks-cluster'
+        K8S_NAMESPACE = 'mern-app'
     }
 
     stages {
@@ -50,11 +52,54 @@ pipeline {
                 '''
             }
         }
+
+        stage('Deploy to EKS with Helm') {
+            steps {
+                sh '''
+                    aws eks update-kubeconfig \
+                        --name $EKS_CLUSTER \
+                        --region $AWS_REGION
+
+                    helm upgrade --install mern-app ./helm/mern-app \
+                        --namespace $K8S_NAMESPACE \
+                        --create-namespace \
+                        --wait \
+                        --timeout 10m
+
+                    kubectl rollout status deployment/frontend \
+                        --namespace $K8S_NAMESPACE \
+                        --timeout=5m
+
+                    kubectl rollout status deployment/hello-service \
+                        --namespace $K8S_NAMESPACE \
+                        --timeout=5m
+
+                    kubectl rollout status deployment/profile-service \
+                        --namespace $K8S_NAMESPACE \
+                        --timeout=5m
+
+                    kubectl rollout status deployment/mongodb \
+                        --namespace $K8S_NAMESPACE \
+                        --timeout=5m
+                '''
+            }
+        }
+
+        stage('Validate EKS Deployment') {
+            steps {
+                sh '''
+                    kubectl get deployments -n $K8S_NAMESPACE
+                    kubectl get pods -n $K8S_NAMESPACE
+                    kubectl get svc -n $K8S_NAMESPACE
+                    kubectl get hpa -n $K8S_NAMESPACE
+                '''
+            }
+        }
     }
 
     post {
         success {
-            echo 'All Docker images were successfully pushed to Amazon ECR.'
+            echo 'Images were pushed to ECR and the application was successfully deployed to EKS with Helm.'
         }
 
         failure {
