@@ -1,65 +1,64 @@
-# MERN Microservices – AWS EKS Orchestration & Scaling
+# MERN Microservices – AWS EKS Orchestration, CI/CD & Scaling
 
-A DevOps implementation of a MERN microservices application containerized with Docker and deployed to Amazon EKS. The project demonstrates source control, Docker image creation, Amazon ECR, Jenkins CI, GitHub webhook automation, Kubernetes, Helm, horizontal scaling, and CloudWatch monitoring/logging.
+A production-style DevOps implementation of a MERN microservices application using Docker, Amazon ECR, Jenkins, Amazon EKS, Helm, Kubernetes Horizontal Pod Autoscaling (HPA), and Amazon CloudWatch.
+
+The project demonstrates an end-to-end flow from source-code commit through automated container build, image publishing, Helm deployment to EKS, application scaling, centralized observability, and CloudWatch alerting.
 
 ## Project Status
 
-| Component | Status | Validation |
+| Area | Status | Validation |
 |---|---|---|
-| GitHub repository | ✅ Complete | Fork maintained on `main` |
-| Docker containerization | ✅ Complete | Frontend, Hello Service and Profile Service images built and validated |
-| Local Docker integration | ✅ Complete | Application validated through Nginx at `http://localhost:8080` |
-| Amazon ECR | ✅ Complete | Three application images pushed to ECR |
-| Jenkins CI | ✅ Complete | Pipeline builds and pushes images to ECR |
-| GitHub webhook | ✅ Complete | Git push automatically triggered Jenkins Build #3 successfully |
+| GitHub source control | ✅ Complete | Fork maintained on `main` |
+| Docker containerization | ✅ Complete | Frontend, Hello Service and Profile Service images built successfully |
+| Local Docker integration | ✅ Complete | MERN application validated through Nginx |
+| Amazon ECR | ✅ Complete | Three application images published |
+| Jenkins CI | ✅ Complete | Docker build and ECR push pipeline successful |
+| GitHub webhook | ✅ Complete | Git push automatically triggered Jenkins |
 | Amazon EKS | ✅ Complete | `mern-eks-cluster` running in `ap-south-1` |
-| Kubernetes deployment | ✅ Complete | Four workloads and services running in `mern-app` |
-| Helm | ✅ Complete | `mern-app` release deployed and upgraded to revision 2 |
-| Horizontal scaling | ✅ Complete | Frontend, Hello Service and Profile Service scaled to 2 replicas |
-| EKS worker scaling | ✅ Complete | Managed node group scaled from 1 to 2 `t3.small` nodes |
-| CloudWatch control-plane logging | ✅ Complete | API, audit, authenticator, controller manager and scheduler enabled |
-| CloudWatch Observability | ✅ Complete | `amazon-cloudwatch-observability` add-on is `ACTIVE` |
-| Centralized logging | ✅ Complete | CloudWatch application, host, dataplane and performance log groups present |
-| Automated EKS deployment from Jenkins | ⚠️ Not implemented | EKS/Helm deployment was performed and validated separately |
-| HPA | ⚠️ Not implemented | Fixed replica scaling demonstrated with Helm |
+| Helm deployment | ✅ Complete | Application deployed through `helm upgrade --install` |
+| Jenkins → EKS CD | ✅ Complete | Jenkins automatically updates the EKS deployment with Helm |
+| HPA | ✅ Complete | Frontend, Hello Service and Profile Service configured for 2–4 replicas |
+| EKS worker scaling | ✅ Complete | Managed node group running 3 `t3.small` workers |
+| CloudWatch control-plane logging | ✅ Complete | All five EKS control-plane log types enabled |
+| CloudWatch Observability | ✅ Complete | EKS observability add-on active |
+| Centralized logging | ✅ Complete | Container Insights application, host, dataplane and performance logs available |
+| CloudWatch alarm | ✅ Complete | Worker CPU alarm created at 70% |
 
-## 1. Architecture
+## Architecture
 
 ```text
-                         GitHub
-                           |
-                           | Push
-                           v
-                        Jenkins
-                           |
-                    Docker Build / Push
-                           |
-                           v
-                    Amazon ECR
-             +-------------+-------------+
-             |             |             |
-             v             v             v
-        frontend     hello-service   profile-service
-             |             |             |
-             +-------------+-------------+
-                           |
-                           v
-                     Amazon EKS
-                           |
-                    Helm-managed apps
-                           |
-             +-------------+-------------+
-             |             |             |
-             v             v             v
-        Frontend Pods  Hello Pods   Profile Pods
-                                         |
-                                         v
-                                     MongoDB
+                         Developer
+                             |
+                             | git push
+                             v
+                          GitHub
+                             |
+                         Webhook
+                             |
+                             v
+                          Jenkins
+                             |
+                +------------+------------+
+                |                         |
+          Docker Build              AWS CLI / Helm
+                |                         |
+                v                         v
+          Amazon ECR                 Amazon EKS
+        +------+------+          +---------+---------+
+        |      |      |          |                   |
+        v      v      v          v                   v
+     frontend hello profile   Frontend Pods      Backend Pods
+        |      |      |          |                   |
+        +------+------+
+               |
+               v
+            MongoDB
 
-                    CloudWatch Observability
-                    /        |        |       \
-              Application  Host  Dataplane  Performance
-                         + EKS control-plane logs
+       Amazon CloudWatch Observability
+       |        |        |        |
+       v        v        v        v
+   Application  Host  Dataplane  Performance
+       + EKS control-plane logs
 ```
 
 ### Runtime request flow
@@ -72,17 +71,17 @@ AWS LoadBalancer
    |
    v
 Frontend Service (Nginx)
-   |--------------------------|
-   |                          |
-   v                          v
-hello-service            profile-service
-   :3001                      :3002
-                              |
-                              v
-                         MongoDB :27017
+   |---------------------------|
+   |                           |
+   v                           v
+hello-service             profile-service
+   :3001                       :3002
+                               |
+                               v
+                          MongoDB :27017
 ```
 
-## 2. Technology Stack
+## Technology Stack
 
 ### Application
 
@@ -93,7 +92,7 @@ hello-service            profile-service
 - Mongoose
 - Axios
 
-### DevOps / Cloud
+### DevOps and Cloud
 
 - Git / GitHub
 - Docker
@@ -104,9 +103,12 @@ hello-service            profile-service
 - Amazon EKS
 - Kubernetes
 - Helm
+- Kubernetes HPA
 - Amazon CloudWatch
+- Container Insights
+- Fluent Bit
 
-## 3. Repository Structure
+## Repository Structure
 
 ```text
 SampleMERNwithMicroservices/
@@ -138,9 +140,12 @@ SampleMERNwithMicroservices/
 │       ├── .helmignore
 │       └── templates/
 │           ├── frontend.yaml
+│           ├── frontend-hpa.yaml
 │           ├── hello-service.yaml
+│           ├── hello-service-hpa.yaml
 │           ├── mongodb.yaml
-│           └── profile-service.yaml
+│           ├── profile-service.yaml
+│           └── profile-service-hpa.yaml
 ├── k8s/
 │   ├── namespace.yaml
 │   ├── mongodb.yaml
@@ -152,15 +157,13 @@ SampleMERNwithMicroservices/
 └── README.md
 ```
 
-## 4. Git and Version Control
+## 1. Git and Version Control
 
 Repository:
 
 `https://github.com/raviveera2305/SampleMERNwithMicroservices`
 
-The project is maintained on the `main` branch. Changes are committed and pushed through Git.
-
-Typical workflow:
+The repository is maintained on the `main` branch. Changes are committed and pushed through Git.
 
 ```bash
 git status
@@ -169,9 +172,9 @@ git commit -m "descriptive change message"
 git push origin main
 ```
 
-No passwords, access keys, GitHub tokens, or `.env` files are stored in the repository.
+Sensitive files such as `.env` files, access keys and tokens are excluded from the repository.
 
-## 5. Containerization
+## 2. Containerization
 
 Each application component has its own Docker image.
 
@@ -189,9 +192,9 @@ The frontend uses a multi-stage Docker build:
 - Profile Service listens on port `3002`.
 - Profile Service receives `MONGO_URL` at runtime.
 
-### Frontend API routing
+### Nginx API routing
 
-The React application uses relative API paths:
+The frontend uses relative API paths:
 
 ```text
 /api/hello/
@@ -205,9 +208,9 @@ Nginx routes them internally:
 /api/profile/*    -> profile-service:3002/*
 ```
 
-This avoids hard-coded browser-side `localhost` backend URLs.
+This keeps browser-side API calls independent of hard-coded backend host addresses.
 
-## 6. Local Docker Validation
+## 3. Local Docker Validation
 
 A Docker network named `mern-network` was used for local integration.
 
@@ -218,25 +221,17 @@ A Docker network named `mern-network` was used for local integration.
 | `profile-service` | `profile-service:1.0` | `3002:3002` | Profile API |
 | `mongodb` | `mongo:7` | `27017:27017` | Database |
 
-Validated responses:
+Validated endpoints included:
 
 ```text
-GET http://localhost:3001/
-{"msg":"Hello World"}
-
-GET http://localhost:3001/health
-{"status":"OK"}
-
-GET http://localhost:3002/health
-{"status":"OK"}
-
-GET http://localhost:3002/fetchUser
-[]
+GET /                    -> {"msg":"Hello World"}
+GET /health              -> {"status":"OK"}
+GET /fetchUser           -> []
 ```
 
-The complete application was also opened successfully at `http://localhost:8080`.
+The complete frontend was successfully opened through `http://localhost:8080`.
 
-## 7. Amazon ECR
+## 4. Amazon ECR
 
 AWS Region:
 
@@ -244,7 +239,7 @@ AWS Region:
 ap-south-1
 ```
 
-Three ECR repositories were created and populated with application images:
+Application ECR repositories:
 
 ```text
 526362561261.dkr.ecr.ap-south-1.amazonaws.com/hello-service
@@ -252,11 +247,11 @@ Three ECR repositories were created and populated with application images:
 526362561261.dkr.ecr.ap-south-1.amazonaws.com/frontend
 ```
 
-Images validated in ECR included the `1.0` release tags and CI-generated `latest` tags.
+The repositories contain application images with release and CI-generated tags.
 
-The Jenkins EC2 instance uses its IAM role for ECR authentication; AWS access keys are not stored in the Jenkinsfile.
+Jenkins authenticates to ECR using the IAM role attached to the Jenkins EC2 instance rather than storing AWS access keys in the pipeline.
 
-## 8. Jenkins CI and GitHub Webhook
+## 5. Jenkins CI/CD and GitHub Webhook
 
 Jenkins job:
 
@@ -264,7 +259,7 @@ Jenkins job:
 MERN-ECR-CI-CD
 ```
 
-The Jenkins pipeline is stored in the repository as `Jenkinsfile`.
+The pipeline is stored as `Jenkinsfile` in the repository.
 
 ### Pipeline flow
 
@@ -278,10 +273,22 @@ Checkout
 ECR Login
     |
     v
-Build frontend + backend Docker images
+Build Docker Images
     |
     v
-Push images to Amazon ECR
+Push Images to ECR
+    |
+    v
+Update kubeconfig for EKS
+    |
+    v
+Helm upgrade --install
+    |
+    v
+Kubernetes rollout validation
+    |
+    v
+Deployment / Pod / Service / HPA validation
 ```
 
 ### Jenkins stages
@@ -290,18 +297,26 @@ Push images to Amazon ECR
 - ECR Login
 - Build Docker Images
 - Push Images to ECR
+- Deploy to EKS with Helm
+- Validate EKS Deployment
 
-The Jenkins EC2 instance uses the IAM role `Jenkins-ECR-Role` instead of storing AWS access keys in Jenkins credentials.
+The Jenkins EC2 instance uses an IAM role for AWS operations, avoiding long-lived AWS access keys in Jenkins credentials.
 
-### Automatic GitHub trigger
+### GitHub webhook automation
 
-The Jenkins job is configured with the GitHub webhook trigger. A test empty commit was pushed to `main`, which automatically triggered **Jenkins Build #3**, and the build completed successfully.
+The Jenkins job is configured with the GitHub webhook trigger. A test push to `main` automatically triggered Jenkins, validating the GitHub → Jenkins integration.
 
-This validates the GitHub → Jenkins webhook integration.
+### End-to-end CI/CD validation
 
-> **Scope note:** The current Jenkinsfile automates image build and ECR publishing. Kubernetes/Helm deployment was completed separately on EKS and is documented below.
+The final Jenkins pipeline completed with:
 
-## 9. Amazon EKS
+```text
+Finished: SUCCESS
+```
+
+This validates automated image build, ECR publishing, Helm deployment and Kubernetes rollout checks from Jenkins.
+
+## 6. Amazon EKS
 
 Cluster:
 
@@ -311,24 +326,23 @@ Region:  ap-south-1
 Version: Kubernetes v1.34.10
 ```
 
-The cluster was created with `eksctl` using a managed node group:
+Managed node group:
 
 ```text
 Node group:      mern-workers
 Instance type:   t3.small
 Minimum nodes:   1
-Maximum nodes:   2
+Maximum nodes:   3
+Desired nodes:   3
 ```
 
-The cluster was validated with:
+Final validation showed three worker nodes in `Ready` state.
 
 ```bash
 kubectl get nodes
 ```
 
-Final validation showed two worker nodes in `Ready` state, both running Kubernetes `v1.34.10`.
-
-## 10. Kubernetes Deployment
+## 7. Kubernetes Deployment
 
 Namespace:
 
@@ -336,7 +350,7 @@ Namespace:
 mern-app
 ```
 
-Workloads deployed:
+Workloads:
 
 - `frontend`
 - `hello-service`
@@ -350,18 +364,11 @@ Services:
 - `profile-service` → `ClusterIP`
 - `mongodb` → `ClusterIP`
 
-The frontend LoadBalancer successfully returned:
+The frontend was validated through the AWS LoadBalancer and returned HTTP `200 OK`. The browser displayed the application UI, including the Welcome, Hello World and Profile sections.
 
-```text
-HTTP/1.1 200 OK
-Server: nginx/1.27.5
-```
+## 8. Helm Deployment
 
-The application was also successfully opened through the AWS LoadBalancer and displayed the Welcome, Hello World and Profile sections.
-
-## 11. Helm Deployment
-
-Helm version used:
+Helm version:
 
 ```text
 v3.22.0
@@ -373,63 +380,36 @@ Chart:
 helm/mern-app
 ```
 
-The chart contains:
+The chart contains deployments, services and HPA resources for the application components.
 
-```text
-Chart.yaml
-values.yaml
-.helmignore
-templates/
-├── frontend.yaml
-├── hello-service.yaml
-├── mongodb.yaml
-└── profile-service.yaml
-```
-
-### Validation
+### Chart validation
 
 ```bash
 helm lint helm/mern-app
-```
-
-The chart passed lint validation.
-
-The rendered Kubernetes manifests were checked with:
-
-```bash
 helm template mern-app helm/mern-app
 ```
 
-### Install
+Both validation and manifest rendering were completed successfully.
+
+### Automated deployment
+
+Jenkins deploys the chart with:
 
 ```bash
-helm install mern-app helm/mern-app
+helm upgrade --install mern-app ./helm/mern-app \
+  --namespace mern-app \
+  --create-namespace \
+  --wait \
+  --timeout 10m
 ```
 
-Helm reported:
+This keeps the Kubernetes application deployment under Helm management and makes the deployment repeatable from the CI/CD pipeline.
 
-```text
-STATUS: deployed
-REVISION: 1
-```
+## 9. Horizontal Scaling and HPA
 
-### Upgrade
+The application services use Kubernetes Horizontal Pod Autoscaling.
 
-The replica values were later changed and applied with:
-
-```bash
-helm upgrade mern-app helm/mern-app
-```
-
-The release advanced to:
-
-```text
-REVISION: 2
-```
-
-## 12. Horizontal Scaling
-
-The stateless application services were scaled from 1 to 2 replicas through Helm values:
+Helm values configure:
 
 ```yaml
 replicaCount:
@@ -439,56 +419,96 @@ replicaCount:
   mongodb: 1
 ```
 
-MongoDB was intentionally kept at one replica because simply duplicating a standalone MongoDB deployment does not provide database replication or safe shared state.
+HPA configuration for the stateless services:
 
-The first scaling attempt exposed the pod-capacity limit of the single worker node. Kubernetes reported:
+```yaml
+autoscaling:
+  helloService:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 70
 
-```text
-0/1 nodes are available: 1 Too many pods
+  profileService:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 70
+
+  frontend:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 70
 ```
 
-The managed node group was therefore scaled from 1 to 2 worker nodes:
+MongoDB remains at one replica because a standalone MongoDB deployment should not be duplicated without a proper replicated database architecture.
+
+### Live HPA validation
 
 ```bash
-eksctl scale nodegroup \
-  --cluster mern-eks-cluster \
-  --name mern-workers \
-  --nodes 2 \
-  --nodes-min 1 \
-  --nodes-max 2 \
-  --region ap-south-1
+kubectl get hpa -n mern-app
 ```
 
-After the second worker became Ready, all application replicas were scheduled successfully.
+The live cluster showed:
+
+```text
+NAME              MINPODS   MAXPODS   REPLICAS
+frontend          2         4         2
+hello-service     2         4         3
+profile-service   2         4         3
+```
+
+The HPA also demonstrated an actual scale-up event during validation. `hello-service` reached approximately `157%` CPU against a `70%` target and the HPA increased the workload to four replicas.
+
+After additional worker capacity became available, all requested replicas were scheduled successfully.
 
 Final deployment validation:
 
 ```text
 frontend          2/2
-hello-service     2/2
+hello-service     3/3
 mongodb           1/1
-profile-service   2/2
+profile-service   3/3
 ```
 
-The final pod placement showed application replicas distributed across both EKS worker nodes.
+## 10. EKS Worker Scaling
 
-> **Scaling note:** This project demonstrates fixed horizontal replica scaling through Helm. An HPA was not implemented.
+The initial worker node reached Kubernetes pod capacity while HPA was scaling application workloads. Kubernetes reported:
 
-## 13. CloudWatch Monitoring and Logging
+```text
+Too many pods
+```
 
-### 13.1 EKS Control-Plane Logging
+The managed node group was increased to three `t3.small` workers:
+
+```bash
+eksctl scale nodegroup \
+  --cluster mern-eks-cluster \
+  --region ap-south-1 \
+  --name mern-workers \
+  --nodes 3 \
+  --nodes-min 1 \
+  --nodes-max 3
+```
+
+The final cluster contained three `Ready` worker nodes, allowing the HPA-managed application replicas to be scheduled successfully.
+
+## 11. CloudWatch Monitoring and Logging
+
+### EKS control-plane logging
 
 All five EKS control-plane log types were enabled:
 
 ```text
 api
- audit
+audit
 authenticator
 controllerManager
 scheduler
 ```
 
-The configuration was verified using:
+Verification:
 
 ```bash
 aws eks describe-cluster \
@@ -497,9 +517,9 @@ aws eks describe-cluster \
   --query 'cluster.logging.clusterLogging'
 ```
 
-The result showed all five types with `enabled: true`.
+The configuration returned all five types as enabled.
 
-### 13.2 CloudWatch Observability Add-on
+### CloudWatch Observability
 
 The Amazon EKS add-on:
 
@@ -507,49 +527,13 @@ The Amazon EKS add-on:
 amazon-cloudwatch-observability
 ```
 
-was installed and verified as:
+was installed and verified as `ACTIVE`.
 
-```text
-ACTIVE
-```
+The `amazon-cloudwatch` namespace contained the observability controller, CloudWatch agents and Fluent Bit collectors running across the worker nodes.
 
-The add-on uses an IAM service-account role created for the CloudWatch agent.
+### Centralized logs
 
-### 13.3 CloudWatch agents and Fluent Bit
-
-The `amazon-cloudwatch` namespace was validated with:
-
-```bash
-kubectl get pods -n amazon-cloudwatch
-```
-
-The final state included:
-
-```text
-amazon-cloudwatch-observability-controller-manager   Running
-cloudwatch-agent                                     Running (2 pods)
-fluent-bit                                           Running (2 pods)
-```
-
-The agents and Fluent Bit collectors were therefore running across both worker nodes.
-
-### 13.4 Application logging
-
-Application logs were verified from Kubernetes:
-
-```bash
-kubectl logs deployment/hello-service -n mern-app --tail=20
-```
-
-Example validated log:
-
-```text
-Server is running on port 3001
-```
-
-### 13.5 CloudWatch log groups
-
-CloudWatch contained the following EKS Container Insights log groups:
+CloudWatch Container Insights log groups were verified for:
 
 ```text
 /aws/containerinsights/mern-eks-cluster/application
@@ -558,54 +542,108 @@ CloudWatch contained the following EKS Container Insights log groups:
 /aws/containerinsights/mern-eks-cluster/performance
 ```
 
-These provide centralized application/container, host, dataplane and performance telemetry.
+Application logs were also validated from Kubernetes, for example:
 
-## 14. Security and Configuration Practices
+```bash
+kubectl logs deployment/hello-service -n mern-app --tail=20
+```
 
-- AWS access keys are not stored in the Jenkinsfile.
-- Jenkins uses an EC2 IAM role for AWS operations.
+with the application reporting:
+
+```text
+Server is running on port 3001
+```
+
+### CloudWatch alarm
+
+A CloudWatch alarm was created for the EKS worker Auto Scaling Group:
+
+```text
+Alarm:     MERN-EKS-Worker-CPU-High
+Metric:    CPUUtilization
+Statistic: Average
+Period:    5 minutes
+Condition: Greater than 70%
+Datapoints: 1 out of 1
+```
+
+The alarm provides threshold-based monitoring for worker CPU utilization. Notifications were intentionally not attached because the core assignment requires alarm configuration; SNS/ChatOps can be added as an extension.
+
+## 12. Security and Configuration Practices
+
+- AWS access keys are not stored in `Jenkinsfile`.
+- Jenkins uses an EC2 IAM role for AWS authentication.
 - The CloudWatch agent uses a dedicated IAM service-account role.
-- `.env` and environment-specific secret files are excluded through `.dockerignore`.
+- `.env` and environment-specific secret files are excluded from Docker build contexts.
 - Secrets and tokens must never be committed to GitHub.
-- Runtime configuration such as `MONGO_URL` is supplied through Kubernetes environment variables.
-- Production deployments should use HTTPS and a stable DNS name rather than an HTTP AWS LoadBalancer hostname.
-- The Jenkins web interface was exposed on port `8080` for the academic environment; production deployments should restrict access and use HTTPS.
+- Runtime configuration such as `MONGO_URL` is supplied at deployment time.
+- Production deployments should use HTTPS and a stable DNS name.
+- The academic Jenkins environment should be restricted and protected with HTTPS in a production deployment.
 
-## 15. Troubleshooting Notes
+## 13. Troubleshooting and Lessons Learned
 
-### Jenkins temporary resource pressure
+### Jenkins resource pressure
 
-The Jenkins EC2 instance is a small `t2.micro`. Frontend dependency installation initially required additional memory. A 2 GiB swap file was configured on the Jenkins host, after which the pipeline completed successfully.
+The Jenkins host is a small `t2.micro`. Frontend dependency installation required additional memory, so a 2 GiB swap file was configured on the Jenkins host. The pipeline subsequently completed successfully.
 
-### EKS pod scheduling
+### Kubernetes pod capacity
 
-When the application was scaled to two replicas, the single worker reached its maximum pod capacity. Kubernetes reported `Too many pods`. The managed node group was increased to two nodes, after which all replicas became Ready.
+HPA scaling exposed the pod-capacity limit of the initial worker configuration. Increasing the EKS managed node group to three `t3.small` workers resolved the scheduling constraint.
 
-### Helm resource ownership
+### Helm ownership
 
-The initial Kubernetes resources were created with `kubectl apply`. Before Helm installation, those manually managed application resources were removed and recreated through Helm so that Helm could manage the release cleanly.
+The first Helm release was created in the wrong namespace. It was removed and the release was recreated through Jenkins using the correct `mern-app` namespace. This established consistent Helm ownership metadata and allowed automated upgrades to succeed.
 
-## 16. Evidence Checklist
+## 14. Validation Commands
 
-Recommended screenshots/evidence for final submission:
+Useful commands for reproducing the final validation:
+
+```bash
+# EKS
+kubectl get nodes
+
+# Application workloads
+kubectl get deployments -n mern-app
+kubectl get pods -n mern-app -o wide
+kubectl get svc -n mern-app
+
+# HPA
+kubectl get hpa -n mern-app
+
+# Helm
+helm list --all-namespaces
+helm status mern-app -n mern-app
+
+# CloudWatch observability
+kubectl get pods -n amazon-cloudwatch
+
+# Application logs
+kubectl logs deployment/hello-service -n mern-app --tail=20
+```
+
+## 15. Final Evidence Checklist
+
+Recommended evidence for the academic submission:
 
 1. GitHub repository and commit history.
-2. Docker images and local application validation.
-3. Amazon ECR repositories containing pushed images.
-4. Jenkins successful pipeline.
-5. GitHub webhook configuration and successful automatic Jenkins build.
-6. EKS cluster and two Ready worker nodes.
-7. Kubernetes workloads and services.
-8. Helm release with `STATUS: deployed` and revision 2 after upgrade.
+2. Dockerfiles and local Docker application validation.
+3. Amazon ECR repositories with application images.
+4. Jenkins successful CI/CD pipeline.
+5. GitHub webhook configuration and automatic Jenkins build.
+6. EKS cluster with three `Ready` worker nodes.
+7. Kubernetes deployments, pods and services in `mern-app`.
+8. Helm release and successful Jenkins Helm deployment.
 9. Browser showing the application through the AWS LoadBalancer.
-10. Scaling evidence showing 2/2 replicas for frontend, Hello Service and Profile Service.
-11. CloudWatch Observability pods running on both worker nodes.
-12. CloudWatch Container Insights log groups.
-13. Final end-to-end application validation.
+10. HPA output showing 2–4 replica ranges and live replica counts.
+11. Evidence of HPA scale-up under high CPU.
+12. CloudWatch Observability pods running across worker nodes.
+13. CloudWatch Container Insights log groups.
+14. CloudWatch `MERN-EKS-Worker-CPU-High` alarm.
+15. Final Jenkins build showing `Finished: SUCCESS`.
 
-## 17. Final Validation Summary
+## 16. Final Validation Summary
 
-The completed implementation demonstrates the following end-to-end flow:
+The completed implementation provides the following automated DevOps flow:
 
 ```text
 Developer Commit
@@ -617,52 +655,33 @@ GitHub main
       v
 Jenkins
       |
-      v
-Docker Build
+      +--> Docker Build
       |
-      v
-Amazon ECR
+      +--> Amazon ECR Push
+      |
+      +--> EKS kubeconfig
+      |
+      +--> Helm Deployment
+      |
+      +--> Kubernetes Rollout Validation
+      |
+      +--> HPA / Service / Pod Validation
       |
       v
 Amazon EKS
       |
-      v
-Helm Release
-      |
-      +--> Frontend (2 replicas)
-      +--> Hello Service (2 replicas)
-      +--> Profile Service (2 replicas)
-      +--> MongoDB (1 replica)
+      +--> 3 worker nodes
+      +--> 2–4 replicas for stateless services
+      +--> LoadBalancer frontend
+      +--> MongoDB backend
       |
       v
-AWS LoadBalancer
+Amazon CloudWatch
       |
-      v
-Browser
-
-CloudWatch
-  +--> EKS control-plane logs
-  +--> Application logs
-  +--> Host logs
-  +--> Dataplane logs
-  +--> Performance telemetry
+      +--> Control-plane logs
+      +--> Container Insights
+      +--> Centralized logs
+      +--> Worker CPU alarm
 ```
 
-The application was successfully deployed, accessed through the AWS LoadBalancer, scaled across two EKS worker nodes, and integrated with CloudWatch monitoring and centralized logging.
-
-## 18. Future Improvements
-
-For a production-grade extension, the project could add:
-
-- Jenkins-driven Helm deployment to EKS after successful image publishing.
-- Immutable image tags based on Git commit SHA instead of relying on `latest`.
-- Horizontal Pod Autoscaler using CPU/memory metrics.
-- MongoDB Atlas or a managed database instead of a single in-cluster MongoDB pod.
-- Kubernetes Secrets or AWS Secrets Manager for sensitive configuration.
-- HTTPS with a stable DNS name and AWS Certificate Manager.
-- CloudWatch alarms and dashboards for operational thresholds.
-- SNS/Slack/Teams/Telegram notifications for CI/CD and operational events.
-
----
-
-**Repository:** `https://github.com/raviveera2305/SampleMERNwithMicroservices`
+The project now demonstrates containerization, CI/CD, EKS orchestration, Helm-based deployment, horizontal autoscaling, worker-node scaling, centralized monitoring/logging, and CloudWatch alerting in one integrated workflow.
