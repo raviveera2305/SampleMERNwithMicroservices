@@ -1,0 +1,21 @@
+{{- if .Values.autoscaling.profileService.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: profile-service
+  namespace: {{ .Values.namespace }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: profile-service
+  minReplicas: {{ .Values.autoscaling.profileService.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.profileService.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.profileService.targetCPUUtilizationPercentage }}
+{{- end }}
