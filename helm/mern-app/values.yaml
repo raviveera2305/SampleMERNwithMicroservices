@@ -23,6 +23,25 @@ replicaCount:
   frontend: 2
   mongodb: 1
 
+autoscaling:
+  helloService:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 70
+
+  profileService:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 70
+
+  frontend:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 70
+
 services:
   helloService:
     port: 3001
